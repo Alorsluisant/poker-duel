@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>撲克牌決鬥 - 線上對戰</title>
+    <title>撲克牌決鬥 - 線上大廳</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Socket.io 客戶端函式庫 -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
         body {
@@ -33,55 +32,55 @@
             transform: translateY(-5px) scale(1.05);
             box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
-        .card.played {
-            transform: scale(1.1);
-            border-width: 2px;
-            border-color: #2563eb;
-        }
-        .card-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-        .card-suit {
-            font-size: 1.25rem;
-        }
+        .card-value { font-size: 1.5rem; font-weight: bold; }
+        .card-suit { font-size: 1.25rem; }
         .card-back {
             background: linear-gradient(135deg, #6b7280 25%, transparent 25%) -40px 0, linear-gradient(225deg, #6b7280 25%, transparent 25%) -40px 0, linear-gradient(315deg, #6b7280 25%, transparent 25%), linear-gradient(45deg, #6b7280 25%, transparent 25%);
             background-size: 80px 80px;
             background-color: #4b5563;
         }
-        #game-screen {
-            background-image: radial-gradient(circle, #374151, #1f2937);
-        }
-        .disabled-card {
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-        .waiting-opponent-card {
-            border: 2px dashed #fbbf24; /* Amber-300 */
-        }
+        #game-screen { background-image: radial-gradient(circle, #374151, #1f2937); }
+        .disabled-card { cursor: not-allowed; opacity: 0.7; pointer-events: none; }
+        .waiting-opponent-card { border: 2px dashed #fbbf24; }
+        .is-turn { box-shadow: 0 0 20px 5px rgba(250, 204, 21, 0.7); }
     </style>
 </head>
 <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
 
-    <!-- 主容器 -->
-    <div id="app-container" class="w-full max-w-md mx-auto">
+    <div id="app-container" class="w-full max-w-lg mx-auto">
 
         <!-- 大廳介面 -->
         <div id="lobby" class="bg-slate-800 p-8 rounded-lg shadow-2xl">
             <h1 class="text-4xl font-bold text-center mb-2">撲克牌決鬥</h1>
-            <p class="text-center text-slate-400 mb-8">線上對戰版</p>
-            <div class="space-y-4">
-                <input type="text" id="player-name" placeholder="輸入你的暱稱" class="w-full bg-slate-700 text-white p-3 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500" value="玩家">
-                <button id="create-room-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition duration-200">創建房間</button>
-                <div class="flex items-center space-x-2">
-                    <input type="text" id="room-code-input" placeholder="輸入房間代碼" class="w-full bg-slate-700 text-white p-3 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button id="join-room-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-200">加入</button>
+            <p class="text-center text-slate-400 mb-8">線上大廳</p>
+            
+            <div class="mb-6">
+                <label for="player-name" class="block mb-2 text-sm font-medium text-slate-300">你的暱稱</label>
+                <input type="text" id="player-name" class="w-full bg-slate-700 text-white p-3 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 私人房間 -->
+                <div class="bg-slate-700 p-4 rounded-lg">
+                    <h2 class="text-lg font-bold mb-3 text-center">私人房間</h2>
+                    <button id="create-room-btn" class="w-full bg-blue-600 hover:bg-blue-700 font-bold py-2 px-4 rounded-md transition mb-3">創建私人房間</button>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="room-code-input" placeholder="房間代碼" class="w-full bg-slate-600 p-2 rounded-md border border-slate-500">
+                        <button id="join-room-btn" class="bg-green-600 hover:bg-green-700 font-bold py-2 px-4 rounded-md">加入</button>
+                    </div>
+                </div>
+                <!-- 公開房間 -->
+                <div class="bg-slate-700 p-4 rounded-lg">
+                     <h2 class="text-lg font-bold mb-3 text-center">公開房間</h2>
+                     <button id="create-public-btn" class="w-full bg-amber-600 hover:bg-amber-700 font-bold py-2 px-4 rounded-md transition mb-3">創建公開房間</button>
+                     <div id="public-rooms-list" class="space-y-2 max-h-40 overflow-y-auto">
+                        <!-- 公開房間列表會動態插入此處 -->
+                     </div>
                 </div>
             </div>
-            <p id="lobby-error" class="text-red-400 text-center mt-4 h-5"></p>
+             <p id="lobby-error" class="text-red-400 text-center mt-4 h-5"></p>
         </div>
-
+        
         <!-- 等待畫面 -->
         <div id="waiting-room" class="hidden bg-slate-800 p-8 rounded-lg shadow-2xl text-center">
             <h2 class="text-2xl font-bold mb-4">房間代碼</h2>
@@ -91,13 +90,14 @@
 
         <!-- 遊戲介面 -->
         <div id="game-screen" class="hidden h-screen max-h-[800px] w-full max-w-md mx-auto flex flex-col p-4 rounded-lg shadow-2xl relative">
-            <!-- 頂部資訊 (對手) -->
             <div id="opponent-info" class="text-center mb-2">
-                 <div class="text-lg font-bold text-slate-300">對手</div>
+                 <div class="flex justify-center items-center gap-4">
+                    <div class="text-lg font-bold text-slate-300" id="opponent-name">對手</div>
+                    <div class="text-sm font-semibold text-amber-400">🏆 <span id="opponent-wins">0</span></div>
+                 </div>
                  <div class="text-2xl font-bold text-red-500">❤️ <span id="opponent-hp">25</span></div>
             </div>
             
-             <!-- 對手區域 -->
             <div id="opponent-area" class="flex flex-col items-center justify-center flex-grow">
                 <div class="relative w-40 h-40 flex items-center justify-center">
                     <div id="opponent-played-card" class="absolute"></div>
@@ -105,10 +105,8 @@
                 <div id="opponent-hand" class="flex justify-center space-x-[-40px] mt-2"></div>
             </div>
 
-            <!-- 遊戲日誌 -->
             <div id="game-log" class="text-center text-amber-300 h-10 my-2 text-sm flex items-center justify-center"></div>
 
-            <!-- 玩家區域 -->
             <div id="player-area" class="flex flex-col items-center justify-center flex-grow">
                 <div id="player-hand" class="flex justify-center space-x-[-20px] mb-2"></div>
                 <div class="relative w-40 h-40 flex items-center justify-center">
@@ -116,206 +114,206 @@
                 </div>
             </div>
 
-            <!-- 底部資訊 (自己) -->
             <div id="player-info" class="text-center mt-2">
                  <div class="text-2xl font-bold text-green-500">❤️ <span id="player-hp">25</span></div>
-                 <div id="player-name-display" class="text-lg font-bold text-slate-300">玩家</div>
+                 <div class="flex justify-center items-center gap-4">
+                    <div class="text-lg font-bold text-slate-300" id="player-name-display">玩家</div>
+                    <div class="text-sm font-semibold text-amber-400">🏆 <span id="player-wins">0</span></div>
+                 </div>
             </div>
             
-            <!-- 遊戲結束彈窗 -->
             <div id="game-over-modal" class="hidden absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center text-center p-8">
                 <h2 id="game-over-message" class="text-5xl font-bold mb-4"></h2>
-                <button id="back-to-lobby-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-xl transition duration-200">返回大廳</button>
+                <p id="rematch-status" class="text-slate-300 mb-4 h-6"></p>
+                <div class="flex gap-4">
+                    <button id="rematch-btn" class="bg-green-600 hover:bg-green-700 font-bold py-3 px-6 rounded-lg text-xl">再玩一局</button>
+                    <button id="back-to-lobby-btn" class="bg-blue-600 hover:bg-blue-700 font-bold py-3 px-6 rounded-lg text-xl">返回大廳</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script type="module">
-        // --- UI 元素 ---
         const lobby = document.getElementById('lobby');
         const waitingRoom = document.getElementById('waiting-room');
         const gameScreen = document.getElementById('game-screen');
-        
         const playerNameInput = document.getElementById('player-name');
         const createRoomBtn = document.getElementById('create-room-btn');
+        const createPublicBtn = document.getElementById('create-public-btn');
         const joinRoomBtn = document.getElementById('join-room-btn');
         const roomCodeInput = document.getElementById('room-code-input');
         const roomCodeDisplay = document.getElementById('room-code-display');
+        const publicRoomsList = document.getElementById('public-rooms-list');
         const lobbyError = document.getElementById('lobby-error');
-
+        
         // --- Socket.io 連線 ---
-        // 提醒: 在實際部署時，要將 'http://localhost:3000' 換成您的伺服器網址
-        const socket = io('http://localhost:3000');
+        const socket = io('https://poker-duel-server.onrender.com'); // **重要**：確保這是您 Render 伺服器的網址
         let myPlayerId = null;
         let myRoomCode = null;
 
+        // --- 玩家暱稱處理 ---
+        function savePlayerName(name) {
+            localStorage.setItem('pokerDuelPlayerName', name);
+        }
+        function loadPlayerName() {
+            return localStorage.getItem('pokerDuelPlayerName') || `玩家${Math.floor(Math.random() * 1000)}`;
+        }
+        playerNameInput.value = loadPlayerName();
+
         // --- 大廳邏輯 ---
-        createRoomBtn.onclick = () => {
+        function validatePlayerName() {
             const playerName = playerNameInput.value.trim();
             if (!playerName) {
                 lobbyError.textContent = "請先輸入暱稱。";
-                return;
+                return null;
             }
-            socket.emit('createRoom', { playerName });
+            savePlayerName(playerName);
+            return playerName;
+        }
+
+        createRoomBtn.onclick = () => {
+            const playerName = validatePlayerName();
+            if (playerName) socket.emit('createRoom', { playerName, isPublic: false });
+        };
+        
+        createPublicBtn.onclick = () => {
+            const playerName = validatePlayerName();
+            if (playerName) socket.emit('createRoom', { playerName, isPublic: true });
         };
 
         joinRoomBtn.onclick = () => {
-            const playerName = playerNameInput.value.trim();
+            const playerName = validatePlayerName();
             const roomCode = roomCodeInput.value.trim().toUpperCase();
-            if (!playerName || !roomCode) {
-                lobbyError.textContent = "請輸入暱稱和房間代碼。";
-                return;
-            }
-            socket.emit('joinRoom', { playerName, roomCode });
+            if (playerName && roomCode) socket.emit('joinRoom', { playerName, roomCode });
+            else lobbyError.textContent = "請輸入房間代碼。";
         };
         
-        roomCodeDisplay.onclick = () => {
-            navigator.clipboard.writeText(myRoomCode).then(() => {
-                document.getElementById('waiting-message').textContent = '已複製到剪貼簿！';
-                setTimeout(() => {
-                     document.getElementById('waiting-message').textContent = '正在等待另一位玩家加入...';
-                }, 2000);
-            });
-        };
+        roomCodeDisplay.onclick = () => navigator.clipboard.writeText(myRoomCode);
 
         // --- Socket 事件監聽 ---
-        socket.on('connect', () => {
-            console.log('成功連接到伺服器！Socket ID:', socket.id);
-            myPlayerId = socket.id;
-        });
-
+        socket.on('connect', () => { myPlayerId = socket.id; });
         socket.on('roomCreated', ({ roomCode }) => {
             myRoomCode = roomCode;
             lobby.classList.add('hidden');
             waitingRoom.classList.remove('hidden');
             roomCodeDisplay.textContent = roomCode;
         });
-
-        socket.on('joinError', ({ message }) => {
-            lobbyError.textContent = message;
-        });
-        
+        socket.on('joinError', ({ message }) => { lobbyError.textContent = message; });
         socket.on('updateGameState', (gameState) => {
-            myRoomCode = gameState.roomCode; // 同步一下房號
-            if (!gameScreen.classList.contains('hidden')) {
-                // 如果已經在遊戲中，直接更新
-                renderGame(gameState);
-            } else {
-                 // 如果是第一次接收到狀態 (遊戲開始)，則切換畫面
+            myRoomCode = gameState.roomCode;
+            const modal = document.getElementById('game-over-modal');
+            if (modal.classList.contains('hidden') === false) {
+                 modal.classList.add('hidden');
+            }
+            if (gameScreen.classList.contains('hidden')) {
                 lobby.classList.add('hidden');
                 waitingRoom.classList.add('hidden');
                 gameScreen.classList.remove('hidden');
-                renderGame(gameState);
             }
+            renderGame(gameState);
         });
-
-        socket.on('gameOver', ({ message }) => {
+        socket.on('gameOver', ({ message, gameState }) => {
+            renderGame(gameState); // 更新最後的血量和勝場
             showGameOver(message);
         });
-        
-         socket.on('opponentLeft', () => {
-            showGameOver("對手已離開遊戲。");
+        socket.on('opponentLeft', () => { showGameOver("對手已離開遊戲。"); });
+        socket.on('rematchStatus', ({ message }) => {
+            const statusEl = document.getElementById('rematch-status');
+            if (statusEl) statusEl.textContent = message;
+        });
+        socket.on('updatePublicRooms', (rooms) => {
+            publicRoomsList.innerHTML = '';
+            if (rooms.length === 0) {
+                publicRoomsList.innerHTML = `<p class="text-slate-400 text-sm text-center">目前沒有公開房間</p>`;
+                return;
+            }
+            rooms.forEach(room => {
+                const roomEl = document.createElement('div');
+                roomEl.className = 'bg-slate-600 p-2 rounded-md flex justify-between items-center';
+                roomEl.innerHTML = `
+                    <span class="text-sm">${room.hostName}的房間</span>
+                    <button class="bg-green-600 hover:bg-green-700 text-xs font-bold py-1 px-2 rounded">加入</button>
+                `;
+                roomEl.querySelector('button').onclick = () => {
+                     const playerName = validatePlayerName();
+                     if (playerName) socket.emit('joinRoom', { playerName, roomCode: room.roomCode });
+                };
+                publicRoomsList.appendChild(roomEl);
+            });
         });
 
-
-        // --- 遊戲邏輯 (客戶端) ---
+        // --- 遊戲邏輯 ---
         function playCard(cardIndex) {
-            // 現在只發送事件給伺服器，由伺服器處理邏輯
             socket.emit('playCard', { roomCode: myRoomCode, cardIndex });
         }
-
-        function showGameOver(message){
-            const modal = document.getElementById('game-over-modal');
-            const messageEl = document.getElementById('game-over-message');
-            messageEl.textContent = message;
-            modal.classList.remove('hidden');
+        function showGameOver(message) {
+            document.getElementById('game-over-modal').classList.remove('hidden');
+            document.getElementById('game-over-message').textContent = message;
+            document.getElementById('rematch-status').textContent = '';
         }
+        document.getElementById('rematch-btn').onclick = () => {
+            socket.emit('requestRematch', { roomCode: myRoomCode });
+            document.getElementById('rematch-status').textContent = '已送出再玩一次的邀請！';
+        };
+        document.getElementById('back-to-lobby-btn').onclick = () => window.location.reload();
 
         // --- 畫面渲染 ---
-        function renderCard(card, isFaceDown = false, isPlayerCard = false, isTurn = false) {
-             if (isFaceDown) {
-                return `<div class="card card-back"></div>`;
-            }
-            if (!card) {
-                // 渲染一個等待中的卡牌佔位符
-                 return `<div class="card waiting-opponent-card flex items-center justify-center"><span class="text-amber-400 text-xs text-center">等待對手出牌</span></div>`;
-            }
-
-            const colorClass = (card.suit === '♥️' || card.suit === '♦️') ? 'text-red-500' : 'text-slate-800';
-            let cardClasses = 'card';
-            if(isPlayerCard) cardClasses += ' player-card';
-            if(isPlayerCard && !isTurn) cardClasses += ' disabled-card';
-
-            return `
-                <div class="${cardClasses}">
-                    <div class="text-left ${colorClass}">
-                        <span class="card-value">${card.value}</span>
-                        <span class="card-suit">${card.suit}</span>
-                    </div>
-                    <div class="text-right self-end rotate-180 ${colorClass}">
-                        <span class="card-value">${card.value}</span>
-                        <span class="card-suit">${card.suit}</span>
-                    </div>
-                </div>
-            `;
+        function renderCard(card, isFaceDown = false) {
+             if (isFaceDown) return `<div class="card card-back"></div>`;
+             if (!card) return `<div class="card waiting-opponent-card flex items-center justify-center"><span class="text-amber-400 text-xs text-center">等待對手出牌</span></div>`;
+            const colorClass = ['♥️', '♦️'].includes(card.suit) ? 'text-red-500' : 'text-slate-800';
+            return `<div class="card"><div class="text-left ${colorClass}"><span class="card-value">${card.value}</span><span class="card-suit">${card.suit}</span></div><div class="text-right self-end rotate-180 ${colorClass}"><span class="card-value">${card.value}</span><span class="card-suit">${card.suit}</span></div></div>`;
         }
         
         function renderGame(gameState) {
-            // 從 gameState 中找到自己和對手的資訊
             const me = gameState.players.find(p => p.id === myPlayerId);
             const opponent = gameState.players.find(p => p.id !== myPlayerId);
             const isMyTurn = gameState.currentPlayerId === myPlayerId;
 
-            // 更新自己的資訊
+            // 更新自己
             document.getElementById('player-name-display').textContent = me.name;
             document.getElementById('player-hp').textContent = me.hp;
+            document.getElementById('player-wins').textContent = me.wins;
             
-            // 更新對手的資訊
+            // 更新對手
             if (opponent) {
-                document.getElementById('opponent-info').querySelector('.text-lg').textContent = opponent.name;
+                document.getElementById('opponent-name').textContent = opponent.name;
                 document.getElementById('opponent-hp').textContent = opponent.hp;
-            } else {
-                 document.getElementById('opponent-info').querySelector('.text-lg').textContent = "等待中...";
-                 document.getElementById('opponent-hp').textContent = 25;
+                document.getElementById('opponent-wins').textContent = opponent.wins;
             }
 
-            // 更新遊戲日誌
             document.getElementById('game-log').innerHTML = gameState.log;
+            if(isMyTurn) document.getElementById('player-info').classList.add('is-turn');
+            else document.getElementById('player-info').classList.remove('is-turn');
+            if(!isMyTurn && opponent) document.getElementById('opponent-info').classList.add('is-turn');
+            else document.getElementById('opponent-info').classList.remove('is-turn');
             
-            // 渲染自己的手牌
+            // 渲染手牌
             const playerHandDiv = document.getElementById('player-hand');
             playerHandDiv.innerHTML = '';
             me.hand.forEach((card, index) => {
                 const cardWrapper = document.createElement('div');
-                cardWrapper.innerHTML = renderCard(card, false, true, isMyTurn).trim();
-                const cardEl = cardWrapper.firstElementChild; 
-
-                if (cardEl && isMyTurn) {
+                cardWrapper.innerHTML = renderCard(card, false).trim();
+                const cardEl = cardWrapper.firstElementChild;
+                cardEl.classList.add('player-card');
+                if (!isMyTurn || me.playedCard) {
+                    cardEl.classList.add('disabled-card');
+                } else {
                     cardEl.onclick = () => playCard(index);
                 }
                 playerHandDiv.appendChild(cardEl);
             });
 
-            // 渲染對手的手牌 (牌背)
+            // 渲染對手手牌
             const opponentHandDiv = document.getElementById('opponent-hand');
             if (opponent) {
                 opponentHandDiv.innerHTML = Array(opponent.handSize).fill(renderCard(null, true)).join('');
-            } else {
-                 opponentHandDiv.innerHTML = '';
             }
 
-            // 渲染已出的牌
-            const playerPlayedCardDiv = document.getElementById('player-played-card');
-            playerPlayedCardDiv.innerHTML = renderCard(me.playedCard, false, false, false);
-
-            const opponentPlayedCardDiv = document.getElementById('opponent-played-card');
-            opponentPlayedCardDiv.innerHTML = renderCard(opponent?.playedCard, false, false, false);
+            // 渲染已出牌
+            document.getElementById('player-played-card').innerHTML = renderCard(me.playedCard, false);
+            document.getElementById('opponent-played-card').innerHTML = renderCard(opponent?.playedCard, false);
         }
-        
-        document.getElementById('back-to-lobby-btn').onclick = () => {
-             window.location.reload();
-        };
-
     </script>
 </body>
 </html>
